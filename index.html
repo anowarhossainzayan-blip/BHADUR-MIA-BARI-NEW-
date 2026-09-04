@@ -239,6 +239,16 @@
       text-align: center;
     }
 
+    .admin-badge {
+      background-color: #e53e3e;
+      color: white;
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      border-radius: 10px;
+      vertical-align: middle;
+      margin-left: 5px;
+    }
+
     .logout-btn {
       margin-top: 15px;
       background-color: #e53e3e;
@@ -269,6 +279,34 @@
       align-items: center;
       gap: 8px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    /* Admin Panel Table */
+    .admin-panel {
+      display: none;
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      margin-top: 30px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      border-top: 5px solid #e53e3e;
+    }
+
+    .admin-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+
+    .admin-table th, .admin-table td {
+      border: 1px solid #ddd;
+      padding: 10px;
+      text-align: left;
+    }
+
+    .admin-table th {
+      background-color: #143d59;
+      color: white;
     }
 
     /* Event Section Styling */
@@ -595,7 +633,7 @@
 
         <!-- Logged In Profile View -->
         <div id="user-profile" class="user-profile">
-          <h3>স্বাগতম, <span id="display-name" style="color: #143d59;"></span>!</h3>
+          <h3>স্বাগতম, <span id="display-name" style="color: #143d59;"></span><span id="admin-badge" class="admin-badge" style="display:none;">ADMIN</span>!</h3>
           <p style="margin-top: 5px; color: green;">✓ আপনার অ্যাকাউন্ট সক্রিয় রয়েছে</p>
           <button onclick="handleLogout()" class="logout-btn">লগআউট</button>
         </div>
@@ -609,6 +647,22 @@
       <h2 class="section-title">রেজিস্ট্রার্ড সদস্যবৃন্দ</h2>
       <div id="member-list" class="member-grid">
         <!-- JavaScript দিয়ে এখানে নাম যুক্ত হবে -->
+      </div>
+
+      <!-- Admin Special Log Panel -->
+      <div id="admin-panel" class="admin-panel">
+        <h3 style="color: #e53e3e; text-align: center;">🔒 অ্যাডমিন প্যানেল: ইউজার লগইন রেকর্ড</h3>
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>ইউজার নাম</th>
+              <th>সর্বশেষ লগইনের সময়</th>
+            </tr>
+          </thead>
+          <tbody id="login-logs-body">
+            <!-- লগইন টাইমস্ট্যাম্প যুক্ত হবে -->
+          </tbody>
+        </table>
       </div>
     </div>
   </section>
@@ -683,6 +737,8 @@
 
   <!-- JavaScript -->
   <script>
+    const ADMIN_USER = "Zayan001";
+
     function switchTab(type) {
       const loginForm = document.getElementById('login-form');
       const signupForm = document.getElementById('signup-form');
@@ -699,6 +755,13 @@
         btns[0].classList.remove('active');
         btns[1].classList.add('active');
       }
+    }
+
+    function recordLoginTime(username) {
+      let logs = JSON.parse(localStorage.getItem('login_logs')) || {};
+      const now = new Date();
+      logs[username] = now.toLocaleString('bn-BD', { dateStyle: 'medium', timeStyle: 'short' });
+      localStorage.setItem('login_logs', JSON.stringify(logs));
     }
 
     function handleSignup(e) {
@@ -729,6 +792,7 @@
 
       if(users[name] && users[name] === pass) {
         localStorage.setItem('logged_in_user', name);
+        recordLoginTime(name);
         checkUserStatus();
       } else {
         alert('নাম অথবা পাসওয়ার্ড ভুল হয়েছে!');
@@ -745,14 +809,26 @@
       const authForms = document.getElementById('auth-forms');
       const userProfile = document.getElementById('user-profile');
       const displayName = document.getElementById('display-name');
+      const adminBadge = document.getElementById('admin-badge');
+      const adminPanel = document.getElementById('admin-panel');
 
       if(activeUser) {
         authForms.style.display = 'none';
         userProfile.style.display = 'block';
         displayName.innerText = activeUser;
+
+        if (activeUser === ADMIN_USER) {
+          adminBadge.style.display = 'inline-block';
+          adminPanel.style.display = 'block';
+          renderAdminLogs();
+        } else {
+          adminBadge.style.display = 'none';
+          adminPanel.style.display = 'none';
+        }
       } else {
         authForms.style.display = 'block';
         userProfile.style.display = 'none';
+        adminPanel.style.display = 'none';
       }
       updateMemberList();
     }
@@ -769,8 +845,26 @@
 
       memberListDiv.innerHTML = userNames.map(name => `
         <div class="member-badge">
-          👤 ${name}
+          👤 ${name} ${name === ADMIN_USER ? '<span class="admin-badge">ADMIN</span>' : ''}
         </div>
+      `).join('');
+    }
+
+    function renderAdminLogs() {
+      const logsBody = document.getElementById('login-logs-body');
+      let logs = JSON.parse(localStorage.getItem('login_logs')) || {};
+      const userNames = Object.keys(logs);
+
+      if (userNames.length === 0) {
+        logsBody.innerHTML = '<tr><td colspan="2" style="text-align:center;">কোনো লগইন রেকর্ড নেই</td></tr>';
+        return;
+      }
+
+      logsBody.innerHTML = userNames.map(name => `
+        <tr>
+          <td><strong>${name}</strong> ${name === ADMIN_USER ? '(অ্যাডমিন)' : ''}</td>
+          <td>${logs[name]}</td>
+        </tr>
       `).join('');
     }
 
